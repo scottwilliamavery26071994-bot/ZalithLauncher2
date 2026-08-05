@@ -4,11 +4,11 @@ on:
   push:
     branches: [ main, master ]
   pull_request:
-  workflow_dispatch:   # 允许手动触发
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-latest   # Actions 使用 Linux 环境执行 sed 命令
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
@@ -21,56 +21,55 @@ jobs:
         run: |
           # 替换所有 .kt .kts .xml .properties 文件中的旧包名
           find . -type f \( -name "*.kt" -o -name "*.kts" -o -name "*.xml" -o -name "*.properties" \) -exec sed -i 's/com\.movtery\.zalithlauncher/com.zzz.launcher/g' {} +
-          # 重命名文件夹（注意：需要先移动原目录）
-          if [ -d "ZalithLauncher/src/main/java/com/movtery/zalithlauncher" ]; then
-            mkdir -p ZalithLauncher/src/main/java/com/zzz
-            mv ZalithLauncher/src/main/java/com/movtery/zalithlauncher ZalithLauncher/src/main/java/com/zzz/launcher
-            rmdir ZalithLauncher/src/main/java/com/movtery 2>/dev/null || true
-          fi
+          # 重命名文件夹（尝试两种常见路径）
+          for base in "app" "ZalithLauncher" "launcher"; do
+            if [ -d "$base/src/main/java/com/movtery/zalithlauncher" ]; then
+              mkdir -p "$base/src/main/java/com/zzz"
+              mv "$base/src/main/java/com/movtery/zalithlauncher" "$base/src/main/java/com/zzz/launcher"
+              rmdir "$base/src/main/java/com/movtery" 2>/dev/null || true
+              break
+            fi
+          done
         shell: bash
 
       # ---------- 2. 修改应用名称 ----------
       - name: Change app name to "zzz 启动器"
         run: |
-          sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">zzz 启动器<\/string>/g' ZalithLauncher/src/main/res/values/strings.xml
-          # 如果有中文文件夹也一并修改
-          if [ -f "ZalithLauncher/src/main/res/values-zh-rCN/strings.xml" ]; then
-            sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">zzz 启动器<\/string>/g' ZalithLauncher/src/main/res/values-zh-rCN/strings.xml
-          fi
-          if [ -f "ZalithLauncher/src/main/res/values-zh-rTW/strings.xml" ]; then
-            sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">zzz 启动器<\/string>/g' ZalithLauncher/src/main/res/values-zh-rTW/strings.xml
-          fi
+          # 查找所有 strings.xml 并替换 app_name
+          find . -path "*/res/values*/strings.xml" -exec sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">zzz 启动器<\/string>/g' {} +
         shell: bash
 
       # ---------- 3. 修改版本号 ----------
       - name: Change versionName
         run: |
-          sed -i 's/versionName = ".*"/versionName = "1.0.0-zzz"/g' ZalithLauncher/build.gradle.kts
+          # 查找 build.gradle.kts 或 build.gradle 并修改 versionName
+          find . -name "build.gradle*" -exec sed -i 's/versionName = ".*"/versionName = "1.0.0-zzz"/g' {} +
         shell: bash
 
-      # ---------- 4. 修改主题色（科技蓝，你可以自己改） ----------
+      # ---------- 4. 修改主题色（科技蓝） ----------
       - name: Change theme colors
         run: |
-          sed -i 's/<color name="colorPrimary">.*<\/color>/<color name="colorPrimary">#1A73E8<\/color>/g' ZalithLauncher/src/main/res/values/colors.xml
-          sed -i 's/<color name="colorPrimaryDark">.*<\/color>/<color name="colorPrimaryDark">#0D47A1<\/color>/g' ZalithLauncher/src/main/res/values/colors.xml
-          sed -i 's/<color name="colorAccent">.*<\/color>/<color name="colorAccent">#03DAC5<\/color>/g' ZalithLauncher/src/main/res/values/colors.xml
+          # 查找 colors.xml 并替换颜色
+          find . -path "*/res/values/colors.xml" -exec sed -i 's/<color name="colorPrimary">.*<\/color>/<color name="colorPrimary">#1A73E8<\/color>/g' {} +
+          find . -path "*/res/values/colors.xml" -exec sed -i 's/<color name="colorPrimaryDark">.*<\/color>/<color name="colorPrimaryDark">#0D47A1<\/color>/g' {} +
+          find . -path "*/res/values/colors.xml" -exec sed -i 's/<color name="colorAccent">.*<\/color>/<color name="colorAccent">#03DAC5<\/color>/g' {} +
         shell: bash
 
-      # ---------- 5. 修改版权信息（About 页面） ----------
+      # ---------- 5. 修改版权信息 ----------
       - name: Change copyright text in AboutFragment
         run: |
-          # 找到 AboutFragment.kt 并替换版权字符串（假设原文本包含 "©" 或 "Copyright"）
-          find ZalithLauncher/src/main/java -name "AboutFragment.kt" -exec sed -i 's/©.*ZalithLauncher/© 2026 zzz | 基于 ZalithLauncher2 (GPLv3)/g' {} +
+          # 查找 AboutFragment.kt 并替换版权字符串
+          find . -name "AboutFragment.kt" -exec sed -i 's/©.*ZalithLauncher/© 2026 zzz | 基于 ZalithLauncher2 (GPLv3)/g' {} +
         shell: bash
 
-      # ---------- 6. 设置 JDK（编译安卓需要） ----------
+      # ---------- 6. 设置 JDK 17 ----------
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # ---------- 7. 授权并编译 ----------
+      # ---------- 7. 编译 ----------
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
@@ -82,4 +81,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: zzz-Launcher-debug
+          path: app/build/outputs/apk/debug/*.apk
+          # 也尝试其他路径，以防万一
+          if-no-files-found: warn
+      - name: Upload APK (fallback path)
+        uses: actions/upload-artifact@v4
+        with:
+          name: zzz-Launcher-debug-fallback
           path: ZalithLauncher/build/outputs/apk/debug/*.apk
