@@ -16,75 +16,54 @@ jobs:
         with:
           fetch-depth: 0
 
-      # ---------- 1. 修改包名 ----------
-      - name: Change package name to com.zzz.launcher
-        run: |
-          # 替换所有 .kt .kts .xml .properties 文件中的旧包名
-          find . -type f \( -name "*.kt" -o -name "*.kts" -o -name "*.xml" -o -name "*.properties" \) -exec sed -i 's/com\.movtery\.zalithlauncher/com.zzz.launcher/g' {} +
-          # 重命名文件夹（尝试两种常见路径）
-          for base in "app" "ZalithLauncher" "launcher"; do
-            if [ -d "$base/src/main/java/com/movtery/zalithlauncher" ]; then
-              mkdir -p "$base/src/main/java/com/zzz"
-              mv "$base/src/main/java/com/movtery/zalithlauncher" "$base/src/main/java/com/zzz/launcher"
-              rmdir "$base/src/main/java/com/movtery" 2>/dev/null || true
-              break
-            fi
-          done
-        shell: bash
-
-      # ---------- 2. 修改应用名称 ----------
+      # ---------- 1. 修改应用名称 ----------
       - name: Change app name to "zzz 启动器"
         run: |
-          # 查找所有 strings.xml 并替换 app_name
           find . -path "*/res/values*/strings.xml" -exec sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">zzz 启动器<\/string>/g' {} +
         shell: bash
 
-      # ---------- 3. 修改版本号 ----------
+      # ---------- 2. 修改版本号 ----------
       - name: Change versionName
         run: |
-          # 查找 build.gradle.kts 或 build.gradle 并修改 versionName
           find . -name "build.gradle*" -exec sed -i 's/versionName = ".*"/versionName = "1.0.0-zzz"/g' {} +
         shell: bash
 
-      # ---------- 4. 修改主题色（科技蓝） ----------
+      # ---------- 3. 修改主题色 ----------
       - name: Change theme colors
         run: |
-          # 查找 colors.xml 并替换颜色
           find . -path "*/res/values/colors.xml" -exec sed -i 's/<color name="colorPrimary">.*<\/color>/<color name="colorPrimary">#1A73E8<\/color>/g' {} +
           find . -path "*/res/values/colors.xml" -exec sed -i 's/<color name="colorPrimaryDark">.*<\/color>/<color name="colorPrimaryDark">#0D47A1<\/color>/g' {} +
           find . -path "*/res/values/colors.xml" -exec sed -i 's/<color name="colorAccent">.*<\/color>/<color name="colorAccent">#03DAC5<\/color>/g' {} +
         shell: bash
 
-      # ---------- 5. 修改版权信息 ----------
+      # ---------- 4. 修改版权信息 ----------
       - name: Change copyright text in AboutFragment
         run: |
-          # 查找 AboutFragment.kt 并替换版权字符串
           find . -name "AboutFragment.kt" -exec sed -i 's/©.*ZalithLauncher/© 2026 zzz | 基于 ZalithLauncher2 (GPLv3)/g' {} +
         shell: bash
 
-      # ---------- 6. 设置 JDK 17 ----------
+      # ---------- 5. 设置 JDK 17 ----------
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # ---------- 7. 编译 ----------
+      # ---------- 6. 编译 ----------
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
       - name: Build APK with Gradle
         run: ./gradlew assembleDebug --no-daemon
 
-      # ---------- 8. 上传 APK ----------
+      # ---------- 7. 上传 APK ----------
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: zzz-Launcher-debug
           path: app/build/outputs/apk/debug/*.apk
-          # 也尝试其他路径，以防万一
           if-no-files-found: warn
-      - name: Upload APK (fallback path)
+      - name: Upload APK (fallback)
         uses: actions/upload-artifact@v4
         with:
           name: zzz-Launcher-debug-fallback
